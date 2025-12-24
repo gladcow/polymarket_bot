@@ -20,12 +20,13 @@ def main():
     TAKE_PROFIT_THRESHOLD = float(os.getenv("TAKE_PROFIT_THRESHOLD"))
     PAIR_DIFFERENCE_THRESHOLD = float(os.getenv("PAIR_DIFFERENCE_THRESHOLD"))
     MAX_INIT_COMBINED_PRICE = float(os.getenv("MAX_INIT_COMBINED_PRICE"))
+    DRY_MODE = True if int(os.getenv("DRY_MODE")) else False
 
     print("Current 15 min BTC market:")
     finder = MarketFinder(GAMMA_URL)
     market_id = finder.get_current_market_id()
     start = finder.get_current_slot_start()
-    market = Market(CLOB_URL, PK, CHAIN_ID, market_id)
+    market = Market(CLOB_URL, PK, CHAIN_ID, market_id, DRY_MODE)
     info = market.market_info() # TODO: check market is active
     print(info)
 

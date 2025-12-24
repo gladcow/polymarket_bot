@@ -1,7 +1,8 @@
 from py_clob_client.client import ClobClient
 
 class Market:
-    def __init__(self, host: str, pk: str, chain_id: int, condition_id: str) -> None:
+    def __init__(self, host: str, pk: str, chain_id: int, condition_id: str, dry: bool) -> None:
+        self.dry = dry
         self.condition_id = condition_id
         self.client = ClobClient(host, key=pk, chain_id=chain_id)
         self.client.set_api_creds(self.client.create_or_derive_api_creds())
@@ -25,15 +26,19 @@ class Market:
         return float(order_book.asks[-1].price), float(order_book.asks[-1].size)
 
     def buy_up(self, price: float, size: float) -> bool:
-        cur_price,  cur_size = self.best_up_ask()
-        if cur_price > price or size > cur_size:
-            return False
-        print(f"Buying {size} UP at {price}")
-        return True
+        if self.dry:
+            cur_price,  cur_size = self.best_up_ask()
+            if cur_price > price or size > cur_size:
+                return False
+            print(f"Buying {size} UP at {price}")
+            return True
+        return False
 
     def buy_down(self, price: float, size: float) -> bool:
-        cur_price,  cur_size = self.best_down_ask()
-        if cur_price > price or size > cur_size:
-            return False
-        print(f"Buying {size} DOWN at {price}")
-        return True
+        if self.dry:
+            cur_price,  cur_size = self.best_down_ask()
+            if cur_price > price or size > cur_size:
+                return False
+            print(f"Buying {size} DOWN at {price}")
+            return True
+        return False
