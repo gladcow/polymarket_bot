@@ -26,6 +26,9 @@ def main():
 
     initial_balance = 100.0
     finder = MarketFinder(GAMMA_URL)
+    print("Wait for the next slot")
+    start = finder.get_current_slot_start()
+    finder.wait_until_next_slot_start(start)
 
     print("Current 15 min BTC market:")
     market_id = finder.get_current_market_id()
