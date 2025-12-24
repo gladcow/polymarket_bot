@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timezone, timedelta
 import json
 import requests
 
@@ -7,7 +8,8 @@ class MarketFinder:
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url
 
-    def get_current_slot_start(self) -> datetime:
+    @staticmethod
+    def get_current_slot_start() -> datetime:
         """
         Returns the start timestamp of the current time slot.
         For 15-minute slots, this returns the start of the current 15-minute interval.
@@ -18,9 +20,18 @@ class MarketFinder:
         slot_start = now.replace(minute=slot_minute, second=0, microsecond=0)
         return slot_start
 
-    def slot_is_active(self, start: datetime) -> bool:
+    @staticmethod
+    def slot_is_active(start: datetime) -> bool:
         dt = datetime.now(timezone.utc) - start
         return int(dt.total_seconds()) < 60 * 15
+
+    @staticmethod
+    def wait_until_next_slot_start(start: datetime) -> None:
+        now = datetime.now(timezone.utc)
+        if now >= start + timedelta(minutes=15):
+            return
+        dt = now - start
+        time.sleep(60 * 15 - dt.total_seconds())
 
     def get_current_market_slug(self) -> str:
         """
