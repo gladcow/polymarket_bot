@@ -6,7 +6,10 @@ class Market:
     def __init__(self, host: str, pk: str, funder: str, chain_id: int, condition_id: str, dry: bool) -> None:
         self.dry = dry
         self.condition_id = condition_id
-        self.client = ClobClient(host, key=pk, chain_id=chain_id,  signature_type=2, funder=funder)
+        if not funder or len(funder) == 0:
+            self.client = ClobClient(host, key=pk, chain_id=chain_id)
+        else:
+            self.client = ClobClient(host, key=pk, chain_id=chain_id,  signature_type=2, funder=funder)
         self.client.set_api_creds(self.client.create_or_derive_api_creds())
         self.info = self.client.get_market(self.condition_id)
         self.upTokenId = self.info['tokens'][0]['token_id']
