@@ -47,3 +47,41 @@ class MarketFinder:
         if data and len(data) > 0:
             return data[0]["conditionId"]
         raise ValueError("No market found in response")
+
+    def get_prev_market_slug(self) -> str:
+        """
+        Returns the slug of the previous market (15 minutes before current slot).
+        """
+        prev_slot_start = self.get_current_slot_start() - timedelta(minutes=15)
+        return f"btc-updown-15m-{int(prev_slot_start.timestamp())}"
+
+    def get_next_market_slug(self) -> str:
+        """
+        Returns the slug of the next market (15 minutes after current slot).
+        """
+        next_slot_start = self.get_current_slot_start() + timedelta(minutes=15)
+        return f"btc-updown-15m-{int(next_slot_start.timestamp())}"
+
+    def get_prev_market_id(self) -> str:
+        """
+        Returns the conditionId of the previous market.
+        """
+        url = f"{self.base_url}/markets?slug={self.get_prev_market_slug()}"
+        response = requests.get(url)
+        data = json.loads(response.text)
+        # Response is an array with one object, extract conditionId from it
+        if data and len(data) > 0:
+            return data[0]["conditionId"]
+        raise ValueError("No market found in response")
+
+    def get_next_market_id(self) -> str:
+        """
+        Returns the conditionId of the next market.
+        """
+        url = f"{self.base_url}/markets?slug={self.get_next_market_slug()}"
+        response = requests.get(url)
+        data = json.loads(response.text)
+        # Response is an array with one object, extract conditionId from it
+        if data and len(data) > 0:
+            return data[0]["conditionId"]
+        raise ValueError("No market found in response")
