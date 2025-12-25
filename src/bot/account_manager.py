@@ -53,7 +53,7 @@ class AccountManager:
                 "from": self.addr,
                 "chainId": self.chainId,
                 "gas": 500000,
-                "gasPrice": self.web3.to_wei('50', 'gwei'),
+                "gasPrice": 2 * self.web3.eth.gas_price,
                 "nonce": nonce,
             })
             signed = self.web3.eth.account.sign_transaction(tx, self.pk)
@@ -63,6 +63,36 @@ class AccountManager:
             print("Redeem complete!")
         except Exception as e:
             print(f"Error redeeming Outcome Tokens : {e}")
+
+    def ensure_usdc_allowance(self, required_amount: float, addr: str) -> bool:
+        required = int(required_amount * 10**6)
+        current_allowance = self.usdc.functions.allowance(self.addr,
+                                                         addr).call()
+        print(f"current_allowance: {current_allowance}")
+
+        if current_allowance >= required:
+            return True
+
+        tx = self.usdc.functions.approve(addr, required).build_transaction({
+            "from": self.addr,
+            "gas": 500000,
+            "gasPrice": 2 * self.web3.eth.gas_price,
+            "nonce": self.web3.eth.get_transaction_count(self.addr),
+            "chainId": self.chainId
+        })
+
+        signed = self.web3.eth.account.sign_transaction(tx, self.pk)
+        txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
+        receipt = self.web3.eth.wait_for_transaction_receipt(txid, 20,  1)
+
+        if receipt.status == 1:
+            print(f"USDC allowance updated: {txid}")
+            return True
+        else:
+            print(f"USDC allowance update failed: {txid}")
+        return False
+
+
 
 
 
