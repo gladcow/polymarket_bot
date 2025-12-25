@@ -2,6 +2,7 @@ import os
 import time
 
 from dotenv import load_dotenv
+from pygments.lexers.templates import CheetahHtmlLexer
 
 from bot.account_manager import AccountManager
 from bot.market import Market
@@ -28,7 +29,7 @@ def main():
     CTF_ADDRESS = os.getenv("CTF_ADDRESS")
     WEB3_PROVIDER = os.getenv("WEB3_PROVIDER")
 
-    account = AccountManager(PK, FUNDER, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS)
+    account = AccountManager(CHAIN_ID, PK, FUNDER, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS)
     print(f"Account: {account.addr}")
     initial_balance = account.balance()
     print(f"Initial balance: {initial_balance} POL")
@@ -41,12 +42,12 @@ def main():
 
     while True:
         start = finder.get_current_slot_start()
-        balance = account.balance()
-        print(f"Current balance: {balance} POL")
-        if balance < 0.01:
-            print("Not enough funds")
-            finder.wait_until_next_slot_start(start)
-            continue
+        # balance = account.balance()
+        # print(f"Current balance: {balance} POL")
+        # if balance < 0.01:
+        #     print("Not enough funds")
+        #     finder.wait_until_next_slot_start(start)
+        #     continue
         time.sleep(120)
         prev_market_id = finder.get_prev_market_id()
         account.redeem_market(prev_market_id)

@@ -5,16 +5,19 @@ import web3.middleware
 from web3 import Web3
 from web3.constants import HASH_ZERO
 from web3.gas_strategies.time_based import fast_gas_price_strategy
+from web3.middleware import ExtraDataToPOAMiddleware
 
 
 class AccountManager:
-    def __init__(self, pk: str, funder: str,  web3_url:str, usdc_address: str, ctf_address: str):
+    def __init__(self, chain_id: int, pk: str, funder: str,  web3_url:str, usdc_address: str, ctf_address: str):
         self.pk =pk
+        self.chainId = chain_id
         self.funder = "" if not funder or len(funder) == 0 else Web3.to_checksum_address(funder)
         self.web3 = Web3(Web3.HTTPProvider(web3_url))
         self.addr = self.web3.eth.account.from_key(self.pk).address
         self.usdc_address = Web3.to_checksum_address(usdc_address)
         self.web3.eth.default_account = self.addr
+        self.web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
         self.web3.eth.set_gas_price_strategy(fast_gas_price_strategy)
 
         # Load ABI from file
@@ -40,20 +43,27 @@ class AccountManager:
 
     def redeem_market(self, condition_id: str) -> None:
         try:
+            nonce = self.web3.eth.get_transaction_count(self.addr)
             tx = self.ctf.functions.redeemPositions(
                 self.usdc_address,  # The collateral token address
                 HASH_ZERO,  # The parent collectionId, always bytes32(0) for Polymarket markets
                 condition_id,
                 [1, 2],
-            )
-            signed = web3.eth.Account.signTransaction(tx, self.pk)
-            txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.rawTransaction))
+            ).build_transaction({
+                "from": self.addr,
+                "chainId": self.chainId,
+                "gas": 500000,
+                "gasPrice": self.web3.to_wei('50', 'gwei'),
+                "nonce": nonce,
+            })
+            signed = self.web3.eth.account.sign_transaction(tx, self.pk)
+            txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
             print(f"Redeem transaction hash: {txid}")
             self.web3.eth.wait_for_transaction_receipt(txid)
             print("Redeem complete!")
         except Exception as e:
             print(f"Error redeeming Outcome Tokens : {e}")
-            raise e
+
 
 
 
