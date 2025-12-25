@@ -7,4 +7,5 @@ requires-python = ">=3.12"
 dependencies = [
     "py-clob-client>=0.32.0",
     "schedule>=1.2.2",
+    "web3>=7.14.0",
 ]
