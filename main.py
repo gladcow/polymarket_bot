@@ -39,7 +39,7 @@ def main():
     finder = MarketFinder(GAMMA_URL)
     print("Wait for the next slot")
     start = finder.get_current_slot_start()
-    #finder.wait_until_next_slot_start(start)
+    finder.wait_until_next_slot_start(start)
 
     while True:
         start = finder.get_current_slot_start()
