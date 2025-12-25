@@ -52,7 +52,7 @@ def main():
             continue
         account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, FEE_MODULE_ADDRESS)
         account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, CTF_EXCHANGE_ADDRESS)
-        time.sleep(120)
+        time.sleep(60)
         prev_market_id = finder.get_prev_market_id()
         account.redeem_market(prev_market_id)
         balance_usdc = account.usdc_balance()
@@ -73,13 +73,15 @@ def main():
             time.sleep(INIT_INTERVAL)
         # main loop
         while finder.slot_is_active(start):
-            strategy.trade()
+            res = strategy.trade()
             if strategy.current_profit() > TAKE_PROFIT_THRESHOLD:
                 print("Take profit")
                 break
             time.sleep(TRADE_INTERVAL)
-            print(f"Current Pair Cost: {strategy.average_pair_cost()}")
+            if res:
+                print(f"Current Pair Cost: {strategy.average_pair_cost()}")
 
+        account.redeem_market(prev_market_id)
         print(f"Spent: {strategy.spent()}")
         print(f"Profit for Up: {strategy.up_profit()}")
         print(f"Profit for Down: {strategy.down_profit()}")

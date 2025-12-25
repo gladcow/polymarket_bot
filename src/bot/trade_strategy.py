@@ -40,9 +40,10 @@ class TradeStrategy:
 
         return self.up_inited and self.down_inited
 
-    def trade(self)-> None:
+    def trade(self)-> bool:
         if not self.up_inited or not self.down_inited:
-            return
+            return False
+        res = False
         pair_cost = self.up_spent / self.up_amount + self.down_spent / self.down_amount
         up_price,  up_size =  self.market.best_up_ask()
         if up_size > self.order_size:
@@ -51,6 +52,7 @@ class TradeStrategy:
                 if self.market.buy_up(up_price, self.order_size):
                     self.up_spent += up_price * self.order_size
                     self.up_amount += self.order_size
+                    res = True
         down_price,  down_size =  self.market.best_down_ask()
         if down_size > self.order_size:
             new_pair_cost = self.up_spent / self.up_amount + (self.down_spent + self.order_size * down_price) / (self.down_amount + self.order_size)
@@ -58,6 +60,8 @@ class TradeStrategy:
                 if self.market.buy_down(down_price, self.order_size):
                     self.down_spent += down_price * self.order_size
                     self.down_amount += self.order_size
+                    res = True
+        return res
 
     def current_profit(self)-> float:
         return min(self.up_amount,  self.down_amount) - (self.up_spent + self.down_spent)
