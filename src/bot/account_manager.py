@@ -9,10 +9,9 @@ from web3.middleware import ExtraDataToPOAMiddleware
 
 
 class AccountManager:
-    def __init__(self, chain_id: int, pk: str, funder: str,  web3_url:str, usdc_address: str, ctf_address: str):
+    def __init__(self, chain_id: int, pk: str, web3_url:str, usdc_address: str, ctf_address: str):
         self.pk =pk
         self.chainId = chain_id
-        self.funder = "" if not funder or len(funder) == 0 else Web3.to_checksum_address(funder)
         self.web3 = Web3(Web3.HTTPProvider(web3_url))
         self.addr = self.web3.eth.account.from_key(self.pk).address
         self.usdc_address = Web3.to_checksum_address(usdc_address)
@@ -32,10 +31,6 @@ class AccountManager:
         self.ctf = self.web3.eth.contract(address=Web3.to_checksum_address(ctf_address), abi=ctf_abi)
 
     def usdc_balance(self) -> float:
-        if len(self.funder) > 0:
-            addr = self.funder
-        else:
-            addr = self.addr
         return self.usdc.functions.balanceOf(self.addr).call() / 10**6
 
     def balance(self) -> float:
@@ -68,7 +63,7 @@ class AccountManager:
         required = int(required_amount * 10**6)
         current_allowance = self.usdc.functions.allowance(self.addr,
                                                          addr).call()
-        print(f"current_allowance: {current_allowance}")
+        print(f"current_allowance for {addr}: {current_allowance}")
 
         if current_allowance >= required:
             return True
@@ -86,10 +81,10 @@ class AccountManager:
         receipt = self.web3.eth.wait_for_transaction_receipt(txid, 20,  1)
 
         if receipt.status == 1:
-            print(f"USDC allowance updated: {txid}")
+            print(f"USDC allowance for {addr} updated: {txid}")
             return True
         else:
-            print(f"USDC allowance update failed: {txid}")
+            print(f"USDC allowance update for {addr} failed: {txid}")
         return False
 
 

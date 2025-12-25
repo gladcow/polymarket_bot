@@ -3,13 +3,10 @@ from py_clob_client.clob_types import MarketOrderArgs, OrderType
 from py_clob_client.order_builder.constants import BUY
 
 class Market:
-    def __init__(self, host: str, pk: str, funder: str, chain_id: int, condition_id: str, dry: bool) -> None:
+    def __init__(self, host: str, pk: str, chain_id: int, condition_id: str, dry: bool) -> None:
         self.dry = dry
         self.condition_id = condition_id
-        if not funder or len(funder) == 0:
-            self.client = ClobClient(host, key=pk, chain_id=chain_id)
-        else:
-            self.client = ClobClient(host, key=pk, chain_id=chain_id,  signature_type=2, funder=funder)
+        self.client = ClobClient(host, key=pk, chain_id=chain_id)
         self.client.set_api_creds(self.client.create_or_derive_api_creds())
         self.info = self.client.get_market(self.condition_id)
         self.upTokenId = self.info['tokens'][0]['token_id']

@@ -2,7 +2,6 @@ import os
 import time
 
 from dotenv import load_dotenv
-from pygments.lexers.templates import CheetahHtmlLexer
 
 from bot.account_manager import AccountManager
 from bot.market import Market
@@ -13,7 +12,6 @@ load_dotenv()
 
 def main():
     PK = os.getenv("PK")
-    FUNDER = os.getenv("FUNDER")
     GAMMA_URL = os.getenv("GAMMA_URL")
     CLOB_URL = os.getenv("CLOB_URL")
     CHAIN_ID = int(os.getenv("CHAIN_ID"))
@@ -30,7 +28,7 @@ def main():
     FEE_MODULE_ADDRESS = os.getenv("FEE_MODULE_ADDRESS")
     WEB3_PROVIDER = os.getenv("WEB3_PROVIDER")
 
-    account = AccountManager(CHAIN_ID, PK, FUNDER, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS)
+    account = AccountManager(CHAIN_ID, PK, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS)
     print(f"Account: {account.addr}")
     initial_balance = account.balance()
     print(f"Initial balance: {initial_balance} POL")
@@ -50,6 +48,7 @@ def main():
             finder.wait_until_next_slot_start(start)
             continue
         account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, FEE_MODULE_ADDRESS)
+        account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, CTF_ADDRESS)
         time.sleep(120)
         prev_market_id = finder.get_prev_market_id()
         account.redeem_market(prev_market_id)
@@ -62,7 +61,7 @@ def main():
 
         print("Current 15 min BTC market:")
         market_id = finder.get_current_market_id()
-        market = Market(CLOB_URL, PK, FUNDER, CHAIN_ID, market_id, DRY_MODE)
+        market = Market(CLOB_URL, PK, CHAIN_ID, market_id, DRY_MODE)
 
         strategy = TradeStrategy(market, ORDER_SIZE, MAX_INIT_COMBINED_PRICE, PAIR_DIFFERENCE_THRESHOLD)
         while finder.slot_is_active(start):
