@@ -87,6 +87,26 @@ class AccountManager:
             print(f"USDC allowance update for {addr} failed: {txid}")
         return False
 
+    def ensure_ctf_allowance(self, addr: str) -> bool:
+        tx = self.ctf.functions.setApprovalForAll(addr, True).build_transaction({
+            "from": self.addr,
+            "gas": 500000,
+            "gasPrice": 3 * self.web3.eth.gas_price,
+            "nonce": self.web3.eth.get_transaction_count(self.addr),
+            "chainId": self.chainId
+        })
+
+        signed = self.web3.eth.account.sign_transaction(tx, self.pk)
+        txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
+        receipt = self.web3.eth.wait_for_transaction_receipt(txid, 20,  1)
+
+        if receipt.status == 1:
+            print(f"CTF allowance for {addr} updated: {txid}")
+            return True
+        else:
+            print(f"CTF allowance update for {addr} failed: {txid}")
+        return False
+
 
 
 

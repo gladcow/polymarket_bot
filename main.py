@@ -26,6 +26,7 @@ def main():
     USDC_ADDRESS = os.getenv("USDC_ADDRESS")
     CTF_ADDRESS = os.getenv("CTF_ADDRESS")
     FEE_MODULE_ADDRESS = os.getenv("FEE_MODULE_ADDRESS")
+    CTF_EXCHANGE_ADDRESS = os.getenv("CTF_EXCHANGE_ADDRESS")
     WEB3_PROVIDER = os.getenv("WEB3_PROVIDER")
 
     account = AccountManager(CHAIN_ID, PK, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS)
@@ -35,6 +36,8 @@ def main():
     initial_usdc_balance = account.usdc_balance()
     print(f"Initial USDC balance: {initial_usdc_balance} USDC")
     finder = MarketFinder(GAMMA_URL)
+    account.ensure_ctf_allowance(FEE_MODULE_ADDRESS)
+    account.ensure_ctf_allowance(CTF_EXCHANGE_ADDRESS)
     print("Wait for the next slot")
     start = finder.get_current_slot_start()
     finder.wait_until_next_slot_start(start)
@@ -48,7 +51,7 @@ def main():
             finder.wait_until_next_slot_start(start)
             continue
         account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, FEE_MODULE_ADDRESS)
-        account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, CTF_ADDRESS)
+        account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, CTF_EXCHANGE_ADDRESS)
         time.sleep(120)
         prev_market_id = finder.get_prev_market_id()
         account.redeem_market(prev_market_id)
