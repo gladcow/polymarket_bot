@@ -53,7 +53,7 @@ class AccountManager:
                 "from": self.addr,
                 "chainId": self.chainId,
                 "gas": 500000,
-                "gasPrice": 2 * self.web3.eth.gas_price,
+                "gasPrice": 3 * self.web3.eth.gas_price,
                 "nonce": nonce,
             })
             signed = self.web3.eth.account.sign_transaction(tx, self.pk)
@@ -76,7 +76,7 @@ class AccountManager:
         tx = self.usdc.functions.approve(addr, required).build_transaction({
             "from": self.addr,
             "gas": 500000,
-            "gasPrice": 2 * self.web3.eth.gas_price,
+            "gasPrice": 3 * self.web3.eth.gas_price,
             "nonce": self.web3.eth.get_transaction_count(self.addr),
             "chainId": self.chainId
         })
