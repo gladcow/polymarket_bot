@@ -1,14 +1,22 @@
 import json
 from pathlib import Path
+
+import web3.middleware
 from web3 import Web3
+from web3.constants import HASH_ZERO
+from web3.gas_strategies.time_based import fast_gas_price_strategy
+
 
 class AccountManager:
     def __init__(self, pk: str, funder: str,  web3_url:str, usdc_address: str, ctf_address: str):
         self.pk =pk
-        #self.addr =
-        self.funder = Web3.to_checksum_address(funder)
+        self.funder = "" if not funder or len(funder) == 0 else Web3.to_checksum_address(funder)
         self.web3 = Web3(Web3.HTTPProvider(web3_url))
-        
+        self.addr = self.web3.eth.account.from_key(self.pk).address
+        self.usdc_address = Web3.to_checksum_address(usdc_address)
+        self.web3.eth.default_account = self.addr
+        self.web3.eth.set_gas_price_strategy(fast_gas_price_strategy)
+
         # Load ABI from file
         usdc_abi_path = Path(__file__).parent.parent / "abi" / "usdc.abi"
         with open(usdc_abi_path, "r") as f:
@@ -17,11 +25,37 @@ class AccountManager:
         with open(ctf_abi_path, "r") as f:
             ctf_abi = json.load(f)
 
-        self.usdc = self.web3.eth.contract(address=Web3.to_checksum_address(usdc_address), abi=usdc_abi)
+        self.usdc = self.web3.eth.contract(address=self.usdc_address, abi=usdc_abi)
         self.ctf = self.web3.eth.contract(address=Web3.to_checksum_address(ctf_address), abi=ctf_abi)
 
+    def usdc_balance(self) -> float:
+        if len(self.funder) > 0:
+            addr = self.funder
+        else:
+            addr = self.addr
+        return self.usdc.functions.balanceOf(self.addr).call() / 10**6
+
     def balance(self) -> float:
-        return self.usdc.functions.balanceOf(self.funder).call() / 10**6
+        return self.web3.eth.get_balance(self.addr) / 10**18
+
+    def redeem_market(self, condition_id: str) -> None:
+        try:
+            tx = self.ctf.functions.redeemPositions(
+                self.usdc_address,  # The collateral token address
+                HASH_ZERO,  # The parent collectionId, always bytes32(0) for Polymarket markets
+                condition_id,
+                [1, 2],
+            )
+            signed = web3.eth.Account.signTransaction(tx, self.pk)
+            txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.rawTransaction))
+            print(f"Redeem transaction hash: {txid}")
+            self.web3.eth.wait_for_transaction_receipt(txid)
+            print("Redeem complete!")
+        except Exception as e:
+            print(f"Error redeeming Outcome Tokens : {e}")
+            raise e
+
+
 
 
 

@@ -22,13 +22,18 @@ def main():
     TAKE_PROFIT_THRESHOLD = float(os.getenv("TAKE_PROFIT_THRESHOLD"))
     PAIR_DIFFERENCE_THRESHOLD = float(os.getenv("PAIR_DIFFERENCE_THRESHOLD"))
     MAX_INIT_COMBINED_PRICE = float(os.getenv("MAX_INIT_COMBINED_PRICE"))
+    MIN_USDC_BALANCE = float(os.getenv("MIN_USDC_BALANCE"))
     DRY_MODE = True if int(os.getenv("DRY_MODE")) else False
     USDC_ADDRESS = os.getenv("USDC_ADDRESS")
     CTF_ADDRESS = os.getenv("CTF_ADDRESS")
     WEB3_PROVIDER = os.getenv("WEB3_PROVIDER")
 
     account = AccountManager(PK, FUNDER, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS)
+    print(f"Account: {account.addr}")
     initial_balance = account.balance()
+    print(f"Initial balance: {initial_balance} POL")
+    initial_usdc_balance = account.usdc_balance()
+    print(f"Initial USDC balance: {initial_usdc_balance} USDC")
     finder = MarketFinder(GAMMA_URL)
     print("Wait for the next slot")
     start = finder.get_current_slot_start()
@@ -36,10 +41,18 @@ def main():
 
     while True:
         start = finder.get_current_slot_start()
-        time.sleep(120)
         balance = account.balance()
-        print(f"Current balance: {balance}:")
-        if balance < 20.0:
+        print(f"Current balance: {balance} POL")
+        if balance < 0.01:
+            print("Not enough funds")
+            finder.wait_until_next_slot_start(start)
+            continue
+        time.sleep(120)
+        prev_market_id = finder.get_prev_market_id()
+        account.redeem_market(prev_market_id)
+        balance_usdc = account.usdc_balance()
+        print(f"Current USDC balance: {balance_usdc} USDC")
+        if balance_usdc < MIN_USDC_BALANCE:
             print("Not enough funds")
             finder.wait_until_next_slot_start(start)
             continue
@@ -47,8 +60,6 @@ def main():
         print("Current 15 min BTC market:")
         market_id = finder.get_current_market_id()
         market = Market(CLOB_URL, PK, FUNDER, CHAIN_ID, market_id, DRY_MODE)
-        info = market.market_info() # TODO: check market is active
-        print(info)
 
         strategy = TradeStrategy(market, ORDER_SIZE, MAX_INIT_COMBINED_PRICE, PAIR_DIFFERENCE_THRESHOLD)
         while finder.slot_is_active(start):
@@ -67,8 +78,6 @@ def main():
         print(f"Spent: {strategy.spent()}")
         print(f"Profit for Up: {strategy.up_profit()}")
         print(f"Profit for Down: {strategy.down_profit()}")
-        info = market.market_info()
-        print(info)
         if finder.slot_is_active(start):
             print("Wait for the next slot")
             finder.wait_until_next_slot_start(start)
