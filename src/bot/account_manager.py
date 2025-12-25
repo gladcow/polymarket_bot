@@ -59,7 +59,7 @@ class AccountManager:
             signed = self.web3.eth.account.sign_transaction(tx, self.pk)
             txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
             print(f"Redeem transaction hash: {txid}")
-            self.web3.eth.wait_for_transaction_receipt(txid)
+            self.web3.eth.wait_for_transaction_receipt(txid, 20, 1.0)
             print("Redeem complete!")
         except Exception as e:
             print(f"Error redeeming Outcome Tokens : {e}")
