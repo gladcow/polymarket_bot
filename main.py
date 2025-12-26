@@ -30,7 +30,7 @@ def main():
     CTF_EXCHANGE_ADDRESS = os.getenv("CTF_EXCHANGE_ADDRESS")
     WEB3_PROVIDER = os.getenv("WEB3_PROVIDER")
 
-    account = AccountManager(CHAIN_ID, PK, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS)
+    account = AccountManager(CHAIN_ID, PK, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS,  DRY_MODE)
     print(f"Account: {account.addr}")
     resolver = ResolveViewer(WEB3_PROVIDER, CTF_ADDRESS, 10)
     resolver.start()
@@ -43,7 +43,8 @@ def main():
     account.ensure_ctf_allowance(CTF_EXCHANGE_ADDRESS)
     print("Wait for the next slot")
     start = finder.get_current_slot_start()
-    finder.wait_until_next_slot_start(start)
+    if not DRY_MODE:
+        finder.wait_until_next_slot_start(start)
 
     while True:
         start = finder.get_current_slot_start()

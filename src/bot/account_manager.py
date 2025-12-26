@@ -9,15 +9,16 @@ from web3.middleware import ExtraDataToPOAMiddleware
 
 
 class AccountManager:
-    def __init__(self, chain_id: int, pk: str, web3_url:str, usdc_address: str, ctf_address: str):
+    def __init__(self, chain_id: int, pk: str, web3_url:str, usdc_address: str, ctf_address: str, dry_mode: bool):
         self.pk =pk
         self.chainId = chain_id
+        self.dry_mode = dry_mode
         self.web3 = Web3(Web3.HTTPProvider(web3_url))
         self.addr = self.web3.eth.account.from_key(self.pk).address
         self.usdc_address = Web3.to_checksum_address(usdc_address)
         self.web3.eth.default_account = self.addr
         self.web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
-        self.web3.eth.set_gas_price_strategy(fast_gas_price_strategy)
+        #self.web3.eth.set_gas_price_strategy(fast_gas_price_strategy)
 
         # Load ABI from file
         usdc_abi_path = Path(__file__).parent.parent / "abi" / "usdc.abi"
@@ -48,10 +49,18 @@ class AccountManager:
                 "from": self.addr,
                 "chainId": self.chainId,
                 "gas": 500000,
-                "gasPrice": 3 * self.web3.eth.gas_price,
+                "maxFeePerGas": self.web3.to_wei(3, 'gwei'),
+                "maxPriorityFeePerGas": self.web3.to_wei(2, 'gwei'),
                 "nonce": nonce,
             })
             signed = self.web3.eth.account.sign_transaction(tx, self.pk)
+            
+            if self.dry_mode:
+                print(f"[DRY MODE] Would send redeem transaction (condition_id: {condition_id})")
+                print(f"[DRY MODE] Transaction would use nonce: {nonce}")
+                print("[DRY MODE] Skipping transaction send")
+                return
+            
             txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
             print(f"Redeem transaction hash: {txid}")
             self.web3.eth.wait_for_transaction_receipt(txid, 20, 1.0)
@@ -68,15 +77,24 @@ class AccountManager:
         if current_allowance >= required:
             return True
 
+        nonce = self.web3.eth.get_transaction_count(self.addr)
         tx = self.usdc.functions.approve(addr, required).build_transaction({
             "from": self.addr,
             "gas": 500000,
-            "gasPrice": 3 * self.web3.eth.gas_price,
-            "nonce": self.web3.eth.get_transaction_count(self.addr),
+            "maxFeePerGas": self.web3.to_wei(3, 'gwei'),
+            "maxPriorityFeePerGas": self.web3.to_wei(2, 'gwei'),
+            "nonce": nonce,
             "chainId": self.chainId
         })
 
         signed = self.web3.eth.account.sign_transaction(tx, self.pk)
+        
+        if self.dry_mode:
+            print(f"[DRY MODE] Would send USDC approval transaction for {addr}")
+            print(f"[DRY MODE] Transaction would use nonce: {nonce}")
+            print("[DRY MODE] Skipping transaction send")
+            return True  # Simulate success in dry mode
+
         txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
         receipt = self.web3.eth.wait_for_transaction_receipt(txid, 20,  1)
 
@@ -88,15 +106,24 @@ class AccountManager:
         return False
 
     def ensure_ctf_allowance(self, addr: str) -> bool:
+        nonce = self.web3.eth.get_transaction_count(self.addr)
         tx = self.ctf.functions.setApprovalForAll(addr, True).build_transaction({
             "from": self.addr,
             "gas": 500000,
-            "gasPrice": 3 * self.web3.eth.gas_price,
-            "nonce": self.web3.eth.get_transaction_count(self.addr),
+            "maxFeePerGas": self.web3.to_wei(3, 'gwei'),
+            "maxPriorityFeePerGas": self.web3.to_wei(2, 'gwei'),
+            "nonce": nonce,
             "chainId": self.chainId
         })
 
         signed = self.web3.eth.account.sign_transaction(tx, self.pk)
+        
+        if self.dry_mode:
+            print(f"[DRY MODE] Would send CTF approval transaction for {addr}")
+            print(f"[DRY MODE] Transaction would use nonce: {nonce}")
+            print("[DRY MODE] Skipping transaction send")
+            return True  # Simulate success in dry mode
+
         txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
         receipt = self.web3.eth.wait_for_transaction_receipt(txid, 20,  1)
 

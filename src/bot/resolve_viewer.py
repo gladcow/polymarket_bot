@@ -96,10 +96,10 @@ class ResolveViewer:
             if self.from_block is not None:
                 self._last_processed_block = self.from_block
             else:
-                # Start from a reasonable recent block (e.g., 1000 blocks ago)
+                # Start from current block if not specified
                 try:
                     latest = self.web3.eth.block_number
-                    self._last_processed_block = max(0, latest - 1000)
+                    self._last_processed_block = latest
                 except Exception as e:
                     print(f"Error getting latest block: {e}")
                     self._last_processed_block = 0
@@ -124,12 +124,32 @@ class ResolveViewer:
             if from_block > to_block:
                 return
             
-            # Query events
-            events = self._condition_resolution_event.get_logs(
-                fromBlock=from_block,
-                toBlock=to_block,
-                argument_filters={}
-            )
+            # Compute event signature hash (keccak256 of event signature string)
+            # Event signature: ConditionResolution(bytes32,address,bytes32,uint256,uint256[])
+            event_signature = "ConditionResolution(bytes32,address,bytes32,uint256,uint256[])"
+            event_signature_hash = self.web3.keccak(text=event_signature)
+            
+            # Build filter for eth_getLogs
+            filter_params = {
+                'address': self.ctf_address,
+                'fromBlock': from_block,
+                'toBlock': to_block,
+                'topics': [event_signature_hash]
+            }
+            
+            # Get raw logs
+            raw_logs = self.web3.eth.get_logs(filter_params)
+            
+            # Process and decode events
+            events = []
+            for log in raw_logs:
+                try:
+                    # Decode the log using the event ABI
+                    decoded = self._condition_resolution_event.process_log(log)
+                    events.append(decoded)
+                except Exception as e:
+                    print(f"Error decoding log: {e}")
+                    continue
             
             # Process and store events
             with self._lock:
