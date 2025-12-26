@@ -21,6 +21,20 @@ class MarketFinder:
         return slot_start
 
     @staticmethod
+    def get_prev_slot_start(start: datetime) -> datetime:
+        """
+        Returns the start timestamp of the previous slot (15 minutes before the given start).
+        """
+        return start - timedelta(minutes=15)
+
+    @staticmethod
+    def get_next_slot_start(start: datetime) -> datetime:
+        """
+        Returns the start timestamp of the next slot (15 minutes after the given start).
+        """
+        return start + timedelta(minutes=15)
+
+    @staticmethod
     def slot_is_active(start: datetime) -> bool:
         dt = datetime.now(timezone.utc) - start
         return int(dt.total_seconds()) < 60 * 15
@@ -33,20 +47,33 @@ class MarketFinder:
         dt = now - start
         time.sleep(60 * 15 - dt.total_seconds())
 
+    @staticmethod
+    def get_market_slug_by_start(start: datetime) -> str:
+        """
+        Returns the slug for a market given its slot start datetime.
+        """
+        return f"btc-updown-15m-{int(start.timestamp())}"
+
     def get_current_market_slug(self) -> str:
         """
         Returns the slug of the current market.
         """
-        return f"btc-updown-15m-{int(self.get_current_slot_start().timestamp())}"
+        return self.get_market_slug_by_start(self.get_current_slot_start())
 
-    def get_current_market_id(self) -> str:
-        url = f"{self.base_url}/markets?slug={self.get_current_market_slug()}"
+    def get_market_id_by_slug(self, slug: str) -> str:
+        """
+        Returns the conditionId for a market given its slug.
+        """
+        url = f"{self.base_url}/markets?slug={slug}"
         response = requests.get(url)
         data = json.loads(response.text)
         # Response is an array with one object, extract conditionId from it
         if data and len(data) > 0:
             return data[0]["conditionId"]
         raise ValueError("No market found in response")
+
+    def get_current_market_id(self) -> str:
+        return self.get_market_id_by_slug(self.get_current_market_slug())
 
     def get_prev_market_slug(self) -> str:
         """

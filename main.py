@@ -3,6 +3,7 @@ import time
 
 from dotenv import load_dotenv
 
+from bot import ResolveViewer
 from bot.account_manager import AccountManager
 from bot.market import Market
 from bot.market_finder import MarketFinder
@@ -31,6 +32,8 @@ def main():
 
     account = AccountManager(CHAIN_ID, PK, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS)
     print(f"Account: {account.addr}")
+    resolver = ResolveViewer(WEB3_PROVIDER, CTF_ADDRESS, 10)
+    resolver.start()
     initial_balance = account.balance()
     print(f"Initial balance: {initial_balance} POL")
     initial_usdc_balance = account.usdc_balance()
@@ -54,7 +57,8 @@ def main():
         account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, CTF_EXCHANGE_ADDRESS)
         time.sleep(60)
         prev_market_id = finder.get_prev_market_id()
-        account.redeem_market(prev_market_id)
+        if(resolver.is_resolved(prev_market_id)):
+            account.redeem_market(prev_market_id)
         balance_usdc = account.usdc_balance()
         print(f"Current USDC balance: {balance_usdc} USDC")
         if balance_usdc < MIN_USDC_BALANCE:
@@ -81,7 +85,9 @@ def main():
             if res:
                 print(f"Current Pair Cost: {strategy.average_pair_cost()}")
 
-        account.redeem_market(prev_market_id)
+        if(resolver.is_resolved(prev_market_id)):
+            account.redeem_market(prev_market_id)
+
         print(f"Spent: {strategy.spent()}")
         print(f"Profit for Up: {strategy.up_profit()}")
         print(f"Profit for Down: {strategy.down_profit()}")
