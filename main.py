@@ -3,7 +3,7 @@ import time
 
 from dotenv import load_dotenv
 
-from bot import ResolveViewer
+from bot import MarketQL
 from bot.account_manager import AccountManager
 from bot.market import Market
 from bot.market_finder import MarketFinder
@@ -29,11 +29,11 @@ def main():
     FEE_MODULE_ADDRESS = os.getenv("FEE_MODULE_ADDRESS")
     CTF_EXCHANGE_ADDRESS = os.getenv("CTF_EXCHANGE_ADDRESS")
     WEB3_PROVIDER = os.getenv("WEB3_PROVIDER")
+    GRAPHQL_URL = os.getenv("GRAPHQL_URL")
 
     account = AccountManager(CHAIN_ID, PK, WEB3_PROVIDER, USDC_ADDRESS, CTF_ADDRESS,  DRY_MODE)
     print(f"Account: {account.addr}")
-    resolver = ResolveViewer(WEB3_PROVIDER, CTF_ADDRESS, 10)
-    resolver.start()
+    resolver = MarketQL(GRAPHQL_URL)
     initial_balance = account.balance()
     print(f"Initial balance: {initial_balance} POL")
     initial_usdc_balance = account.usdc_balance()
@@ -46,6 +46,13 @@ def main():
     if not DRY_MODE:
         finder.wait_until_next_slot_start(start)
 
+    profit = 0.0
+    prev_up_profit = 0.0
+    prev_down_profit = 0.0
+    max_spent = 0.0
+    min_profit = 0.0
+    max_profit = 0.0
+
     while True:
         start = finder.get_current_slot_start()
         balance = account.balance()
@@ -54,12 +61,6 @@ def main():
             print("Not enough funds")
             finder.wait_until_next_slot_start(start)
             continue
-        account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, FEE_MODULE_ADDRESS)
-        account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, CTF_EXCHANGE_ADDRESS)
-        time.sleep(60)
-        prev_market_id = finder.get_prev_market_id()
-        if(resolver.is_resolved(prev_market_id)):
-            account.redeem_market(prev_market_id)
         balance_usdc = account.usdc_balance()
         print(f"Current USDC balance: {balance_usdc} USDC")
         if balance_usdc < MIN_USDC_BALANCE:
@@ -67,8 +68,13 @@ def main():
             finder.wait_until_next_slot_start(start)
             continue
 
-        print("Current 15 min BTC market:")
+        account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, FEE_MODULE_ADDRESS)
+        account.ensure_usdc_allowance(2 * MIN_USDC_BALANCE, CTF_EXCHANGE_ADDRESS)
+
+        prev_market_id = finder.get_prev_market_id()
+        print(f"Prev 15 min BTC market: {prev_market_id}")
         market_id = finder.get_current_market_id()
+        print(f"Current 15 min BTC market: {market_id}")
         market = Market(CLOB_URL, PK, CHAIN_ID, market_id, DRY_MODE)
 
         strategy = TradeStrategy(market, ORDER_SIZE, MAX_INIT_COMBINED_PRICE, PAIR_DIFFERENCE_THRESHOLD)
@@ -86,12 +92,33 @@ def main():
             if res:
                 print(f"Current Pair Cost: {strategy.average_pair_cost()}")
 
-        if(resolver.is_resolved(prev_market_id)):
-            account.redeem_market(prev_market_id)
+        resolved = False
+        winnig_idx = 0
+        while not resolved:
+            resolved, winnig_idx = resolver.resolved(prev_market_id)
+            time.sleep(1)
+        account.redeem_market(prev_market_id)
+        if winnig_idx == 0:
+            print(f"UP wins {prev_market_id}")
+            profit += prev_up_profit
+        else:
+            print(f"DOWN wins {prev_market_id}")
+            profit += prev_down_profit
+        if profit > max_profit:
+            max_profit = profit
+        if profit < min_profit:
+            min_profit = profit
+        print(f"Profit: {profit} USDC (Max Profit: {max_profit}, Min Profit: {min_profit})")
 
-        print(f"Spent: {strategy.spent()}")
-        print(f"Profit for Up: {strategy.up_profit()}")
-        print(f"Profit for Down: {strategy.down_profit()}")
+        spent = strategy.spent()
+        if spent > max_spent:
+            max_spent = spent
+        profit -= spent
+        print(f"Spent: {spent} USDC (Max Spent: {max_spent})")
+        prev_up_profit = strategy.up_amount
+        prev_down_profit = strategy.down_amount
+        print(f"Profit for Up: {prev_up_profit}")
+        print(f"Profit for Down: {prev_down_profit}")
         if finder.slot_is_active(start):
             print("Wait for the next slot")
             finder.wait_until_next_slot_start(start)

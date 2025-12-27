@@ -1,10 +1,8 @@
 import json
 from pathlib import Path
 
-import web3.middleware
 from web3 import Web3
 from web3.constants import HASH_ZERO
-from web3.gas_strategies.time_based import fast_gas_price_strategy
 from web3.middleware import ExtraDataToPOAMiddleware
 
 
@@ -56,13 +54,9 @@ class AccountManager:
             signed = self.web3.eth.account.sign_transaction(tx, self.pk)
             
             if self.dry_mode:
-                print(f"[DRY MODE] Would send redeem transaction (condition_id: {condition_id})")
-                print(f"[DRY MODE] Transaction would use nonce: {nonce}")
-                print("[DRY MODE] Skipping transaction send")
                 return
             
             txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
-            print(f"Redeem transaction hash: {txid}")
             self.web3.eth.wait_for_transaction_receipt(txid, 20, 1.0)
             print("Redeem complete!")
         except Exception as e:
@@ -90,9 +84,6 @@ class AccountManager:
         signed = self.web3.eth.account.sign_transaction(tx, self.pk)
         
         if self.dry_mode:
-            print(f"[DRY MODE] Would send USDC approval transaction for {addr}")
-            print(f"[DRY MODE] Transaction would use nonce: {nonce}")
-            print("[DRY MODE] Skipping transaction send")
             return True  # Simulate success in dry mode
 
         txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
@@ -119,9 +110,6 @@ class AccountManager:
         signed = self.web3.eth.account.sign_transaction(tx, self.pk)
         
         if self.dry_mode:
-            print(f"[DRY MODE] Would send CTF approval transaction for {addr}")
-            print(f"[DRY MODE] Transaction would use nonce: {nonce}")
-            print("[DRY MODE] Skipping transaction send")
             return True  # Simulate success in dry mode
 
         txid = self.web3.to_hex(self.web3.eth.send_raw_transaction(signed.raw_transaction))
